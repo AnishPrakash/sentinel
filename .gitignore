@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+*.pt
+*.pth
+*.pkl
+chroma_db/
+neo4j_data/
+*.log
+node_modules/
+.DS_Store
