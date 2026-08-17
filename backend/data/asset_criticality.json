@@ -1,0 +1,9 @@
+{
+  "db-server":     {"criticality": 10, "label": "Database Server"},
+  "auth-server":   {"criticality": 9,  "label": "Authentication Server"},
+  "file-server":   {"criticality": 7,  "label": "File Server"},
+  "dmz-web":       {"criticality": 6,  "label": "DMZ Web Server"},
+  "workstation-1": {"criticality": 3,  "label": "Developer Workstation"},
+  "workstation-2": {"criticality": 3,  "label": "Developer Workstation"},
+  "honeypot-1":    {"criticality": 1,  "label": "Honeypot"}
+}
