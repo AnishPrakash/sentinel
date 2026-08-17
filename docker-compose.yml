@@ -175,7 +175,7 @@ services:
       - sentinel_net
     depends_on:
       ollama:
-        condition: service_healthy
+        condition: service_started
       chromadb:
         condition: service_healthy
     healthcheck:
