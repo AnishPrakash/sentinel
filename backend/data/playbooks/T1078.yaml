@@ -1,0 +1,191 @@
+# T1078 — Valid Accounts
+# MITRE ATT&CK Tactic: Defense Evasion, Persistence, Privilege Escalation, Initial Access
+# Covers sub-techniques: T1078.001 (Default Accounts), T1078.002 (Domain Accounts),
+#                        T1078.003 (Local Accounts), T1078.004 (Cloud Accounts)
+technique_id: T1078
+technique_name: "Valid Accounts"
+tactic:
+  - "Initial Access"
+  - "Persistence"
+  - "Privilege Escalation"
+  - "Defense Evasion"
+description: >
+  Adversaries obtain and abuse credentials of existing accounts as a means of gaining
+  Initial Access, Persistence, Privilege Escalation, or Defense Evasion. Compromised
+  credentials may be used to bypass access controls placed on various resources on systems
+  within the network and may even be used for persistent access to remote systems and
+  externally available services, such as VPNs, Outlook Web Access, and remote desktop.
+
+# Privilege required: standard user (see privilege_checker.py TECHNIQUE_PRIVILEGE_REQUIREMENTS)
+# NOTE: this technique IS the privilege mechanism — severity depends on WHICH account is compromised.
+
+actions:
+  critical:   # risk_score > 0.85 — privileged account compromise or confirmed lateral movement
+    - id: "REVOKE_SESSION"
+      label: "Revoke All Sessions for Compromised Account"
+      description: >
+        Force-terminate all active sessions (web tokens, Kerberos TGTs, OAuth tokens,
+        NTLM cached credentials, VPN sessions) for the identified compromised account.
+        This is the highest-priority action — must execute before any other remediation.
+      auto_execute: true
+
+    - id: "LOCK_ACCOUNT"
+      label: "Disable Compromised Account"
+      description: >
+        Immediately disable the account in Active Directory (or cloud IdP). Do not
+        delete — preserve for forensic analysis. Set a flag requiring admin re-enablement
+        after credential reset and incident review.
+      auto_execute: true
+
+    - id: "BLOCK_IP"
+      label: "Block Attacker Source IP"
+      description: >
+        If source IP is identified (external login, VPN, RDP) and is not a corporate
+        IP range, inject a perimeter firewall DENY rule immediately.
+      auto_execute: true
+
+    - id: "RESET_CREDS"
+      label: "Force Credential Reset"
+      description: >
+        Trigger a mandatory password reset via admin portal or AD PowerShell.
+        If the account is a service account, rotate the service account secret and
+        update all dependent services. Requires confirm to avoid breaking service chains.
+      auto_execute: false
+      confirm_required: true
+
+  high:       # 0.60 – 0.85 — suspicious account behaviour, not yet confirmed compromise
+    - id: "ISOLATE_HOST"
+      label: "Isolate Host Where Account is Active (Confirm Required)"
+      description: >
+        If the account login was from an unexpected internal host (possible lateral
+        movement), isolate that host from the network segment. Requires analyst
+        confirmation given potential business disruption.
+      auto_execute: false
+      confirm_required: true
+
+    - id: "FORCE_MFA"
+      label: "Force MFA Challenge on Next Login"
+      description: >
+        Push immediate MFA re-authentication requirement for the flagged account.
+        If the attacker does not have the second factor, access is blocked without
+        full account lockout — preserves access for the legitimate user.
+      auto_execute: true
+
+    - id: "CAPTURE_AUTH_LOGS"
+      label: "Capture Full Authentication and Access Logs"
+      description: >
+        Pull 72h of authentication logs (Event IDs 4624, 4625, 4648, 4672, 4768, 4769),
+        access logs for file shares, and remote access logs (RDP, VPN, OWA). Archive
+        immediately for forensic timeline reconstruction.
+      auto_execute: true
+
+    - id: "AUDIT_ACCOUNT_PERMISSIONS"
+      label: "Audit Account Privilege and Group Memberships"
+      description: >
+        Run an AD/LDAP query to enumerate all group memberships, assigned roles, and
+        access rights for the flagged account. Output to analyst console. Flag any
+        privileged groups (Domain Admins, Enterprise Admins, etc.) for urgent review.
+      auto_execute: true
+
+  medium:     # < 0.60 — anomalous login pattern, possible credential reuse or theft
+    - id: "WATCHLIST"
+      label: "Add Account and Source IP to Watchlist"
+      description: >
+        Flag the account for elevated monitoring (5x log sampling). Generate escalation
+        alert if any of the following occur within 60 minutes: privilege use, file access
+        outside normal scope, lateral movement to new hosts, or remote service access.
+      auto_execute: true
+
+    - id: "NOTIFY_SOC"
+      label: "Notify SOC Analyst with Account Behaviour Baseline"
+      description: >
+        Send alert to on-call analyst with login time, source IP, host, and a diff
+        against the account's normal login pattern (expected hours, expected source
+        IP range, expected geo). Flag specific deviations for analyst judgement.
+      auto_execute: true
+
+    - id: "GEO_CHECK"
+      label: "Geo-Anomaly Check on Login Source"
+      description: >
+        Cross-reference login source IP against the account's normal geographies and
+        corporate IP ranges. If impossible travel (e.g. login from two countries within
+        30 min) is detected, auto-escalate to HIGH tier.
+      auto_execute: true
+
+# Indicator of Compromise hints for correlation
+ioc_hints:
+  - type: "event_id"
+    values: [4624, 4648, 4672, 4768, 4769, 4776]
+    description: >
+      Windows Security: successful logon, explicit credential logon, privileged logon,
+      Kerberos TGT/service ticket requests, NTLM credential validation.
+
+  - type: "behavioural_pattern"
+    name: "off_hours_login"
+    description: "Account login outside established working hours baseline (>2σ deviation)"
+
+  - type: "behavioural_pattern"
+    name: "new_host_access"
+    description: "Account accessing a host it has never logged into in the past 30 days"
+
+  - type: "behavioural_pattern"
+    name: "privilege_delta"
+    description: >
+      Account performing privileged operations (service installation, scheduled task
+      creation, registry modification) not seen in historical baseline.
+
+  - type: "behavioural_pattern"
+    name: "impossible_travel"
+    description: "Successful logins from geographically separated IPs within < 60 minutes"
+
+# MITRE sub-technique cross-references
+sub_techniques:
+  - id: "T1078.001"
+    name: "Default Accounts"
+    notes: >
+      Default vendor credentials (admin/admin, root/root). Check for unchanged
+      factory credentials on network devices, IoT, databases, and web applications.
+
+  - id: "T1078.002"
+    name: "Domain Accounts"
+    notes: >
+      Active Directory / LDAP accounts. Most impactful — domain accounts often have
+      access to multiple hosts and services. Correlate with T1110.003 (Password Spraying)
+      or T1557 (Adversary-in-the-Middle) as upstream technique.
+
+  - id: "T1078.003"
+    name: "Local Accounts"
+    notes: >
+      Local OS accounts (SAM database on Windows, /etc/passwd on Linux). Often used
+      for persistence after initial foothold. Look for newly created local accounts
+      alongside this technique (T1136.001).
+
+  - id: "T1078.004"
+    name: "Cloud Accounts"
+    notes: >
+      AWS IAM, Azure AD, GCP service accounts. Check for API key usage from unexpected
+      source IPs, regions, or user agents. Correlate with cloud-specific telemetry.
+
+# Related techniques for correlation (used by playbook_engine to cross-reference)
+related_techniques:
+  upstream:
+    - id: "T1110"
+      name: "Brute Force"
+      relationship: "credentials obtained via brute force"
+    - id: "T1566"
+      name: "Phishing"
+      relationship: "credentials harvested via phishing"
+    - id: "T1003"
+      name: "OS Credential Dumping"
+      relationship: "credentials dumped from memory or disk"
+
+  downstream:
+    - id: "T1021"
+      name: "Remote Services"
+      relationship: "valid account used for lateral movement via RDP/SMB/SSH"
+    - id: "T1053"
+      name: "Scheduled Task/Job"
+      relationship: "persistence mechanism created using valid account privileges"
+    - id: "T1059"
+      name: "Command and Scripting Interpreter"
+      relationship: "interpreter executed under cover of legitimate account context"
