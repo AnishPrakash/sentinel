@@ -40,7 +40,7 @@ def build_beth_graphs(limit: int = 50_000):
         if event is None:
             continue
 
-        key = f"{row.get('host','h1')}_{row.get('pid','0')}"
+        key = f"{row.get('hostName','h1')}_{row.get('processId','0')}"
         sus = int(row.get("sus", 0))
         if key not in session_events:
             session_events[key] = ([], 0)

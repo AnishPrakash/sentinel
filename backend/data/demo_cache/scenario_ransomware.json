@@ -1,0 +1,26 @@
+{
+  "narrative": "",
+  "matched_techniques": [
+    {
+      "technique_id": "T1127.002",
+      "technique_name": "ClickOnce",
+      "tactic": "Unknown",
+      "confidence": -0.34
+    },
+    {
+      "technique_id": "T1218.007",
+      "technique_name": "Msiexec",
+      "tactic": "Unknown",
+      "confidence": -0.37
+    },
+    {
+      "technique_id": "T1218.002",
+      "technique_name": "Control Panel",
+      "tactic": "Unknown",
+      "confidence": -0.4
+    }
+  ],
+  "confidence": 0.5,
+  "predicted_next_stage": "Unknown",
+  "severity": "MEDIUM"
+}

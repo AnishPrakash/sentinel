@@ -1,5 +1,4 @@
 {
-  "_comment": "Adjacency list: host → {reachable_hosts: [list], allowed_ports: [list]}",
   "workstation-1": {
     "reachable": ["auth-server", "file-server"],
     "allowed_ports": [445, 80, 443, 3389]

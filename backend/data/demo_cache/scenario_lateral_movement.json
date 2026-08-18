@@ -1,0 +1,26 @@
+{
+  "narrative": "",
+  "matched_techniques": [
+    {
+      "technique_id": "T1563.001",
+      "technique_name": "SSH Hijacking",
+      "tactic": "Unknown",
+      "confidence": -0.41
+    },
+    {
+      "technique_id": "T1021.004",
+      "technique_name": "SSH",
+      "tactic": "Unknown",
+      "confidence": -0.48
+    },
+    {
+      "technique_id": "T1098.004",
+      "technique_name": "SSH Authorized Keys",
+      "tactic": "Unknown",
+      "confidence": -0.48
+    }
+  ],
+  "confidence": 0.5,
+  "predicted_next_stage": "Unknown",
+  "severity": "MEDIUM"
+}

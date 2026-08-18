@@ -59,35 +59,42 @@ def parse_sysmon_xml(xml_string: str) -> Optional[LogEvent]:
 
 def parse_beth_row(row: dict) -> Optional[LogEvent]:
     """
-    Parse a single row from the BETH dataset (JSON/CSV dict format).
-    BETH columns: timestamp, pid, ppid, uid, args, sus (label)
+    Parse a single row from the BETH dataset (Kaggle version).
+    Columns: timestamp, processId, parentProcessId, userId, hostName,
+             processName, eventName, args, sus, evil
     """
-    # BETH syscall → EdgeType heuristic
+    # Use eventName first, fall back to args content for edge type
+    event_name = str(row.get("eventName", "")).lower()
     args = str(row.get("args", ""))
-    if "execve" in args or "fork" in args or "clone" in args:
+
+    combined = event_name + args.lower()
+
+    if any(k in combined for k in ("execve", "fork", "clone")):
         edge = EdgeType.SPAWN
-    elif "read" in args or "open" in args:
+    elif any(k in combined for k in ("read", "open")):
         edge = EdgeType.READ
-    elif "write" in args or "creat" in args:
+    elif any(k in combined for k in ("write", "creat")):
         edge = EdgeType.WRITE
-    elif "connect" in args or "socket" in args or "sendto" in args:
+    elif any(k in combined for k in ("connect", "socket", "sendto")):
         edge = EdgeType.CONNECT
-    elif "unlink" in args or "rmdir" in args:
+    elif any(k in combined for k in ("unlink", "rmdir")):
         edge = EdgeType.DELETE
     else:
-        edge = EdgeType.READ   # default fallback
+        edge = EdgeType.READ  # default fallback
 
     try:
+        pid  = int(row.get("processId", 0))
+        ppid = int(row.get("parentProcessId", 0))
         return LogEvent(
             timestamp  = str(row.get("timestamp", "0")),
-            host       = str(row.get("host", "honeypot-1")),
-            pid        = int(row.get("pid", 0)),
-            ppid       = int(row.get("ppid", 0)),
-            process    = f"proc_{row.get('pid', 0)}",
-            parent     = f"proc_{row.get('ppid', 0)}",
+            host       = str(row.get("hostName", "honeypot-1")),
+            pid        = pid,
+            ppid       = ppid,
+            process    = str(row.get("processName", f"proc_{pid}")),
+            parent     = f"proc_{ppid}",
             event_type = edge,
-            target     = args[:128],     # truncate long arg strings
-            user       = str(row.get("uid", "root")),
+            target     = args[:128],
+            user       = str(row.get("userId", "root")),
         )
     except Exception as e:
         print(f"[Parser] BETH parse error: {e}")

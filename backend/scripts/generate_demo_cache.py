@@ -4,7 +4,7 @@ Run ONCE before hackathon. Pre-generates LLM narratives for each scenario
 and caches them to disk. During demo, DEMO_MODE=true loads these instantly.
 """
 import sys, os, json
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from simulator.attack_scenarios import ALL_SCENARIOS
 from layer1_ingestion.graph_builder import ProvenanceGraph

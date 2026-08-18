@@ -43,9 +43,9 @@ class RAGNarrativeEngine:
         techniques = []
         for i in range(len(results["ids"][0])):
             techniques.append({
-                "technique_id":   results["metadatas"][0][i]["technique_id"],
-                "technique_name": results["metadatas"][0][i]["name"],
-                "tactic":         results["metadatas"][0][i]["tactic"],
+                "technique_id":   results["metadatas"][0][i].get("technique_id", "T0000"),
+                "technique_name": results["metadatas"][0][i].get("name", "Unknown"),
+                "tactic":         results["metadatas"][0][i].get("tactic", "Unknown"),
                 "document":       results["documents"][0][i],
                 "distance":       results["distances"][0][i] if results.get("distances") else 0.5,
             })
@@ -108,12 +108,12 @@ class RAGNarrativeEngine:
             "model": OLLAMA_MODEL,
             "messages": messages,
             "stream": False,
-            "options": {"temperature": 0.2, "num_predict": 512},
+            "options": {"temperature": 0.2, "num_predict": 256},
         }
         resp = requests.post(
             f"{OLLAMA_BASE_URL}/api/chat",
             json=payload,
-            timeout=60,
+            timeout=300,
         )
         resp.raise_for_status()
         return resp.json()["message"]["content"]
