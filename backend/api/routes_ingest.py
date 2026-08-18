@@ -8,6 +8,7 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException
 from models.schemas import IngestRequest, Alert, AlertSeverity, MitreMatch, ValidationResult
 from models.alert_store import alert_store
+from api.websocket_manager import manager
 
 from layer1_ingestion.log_parser  import parse_beth_row
 from layer1_ingestion.graph_builder import provenance_graph
@@ -61,7 +62,7 @@ async def ingest_logs(request: IngestRequest):
 
         if DEMO_MODE:
             # Use cached narrative for speed
-            narrative_json = _load_demo_cache("scenario_apt")
+            narrative_json = _load_demo_cache("scenario_apt_phishing")
             if not narrative_json:
                 narrative_json = rag_engine.generate_narrative(
                     subgraph, node_meta, host, anomaly_score, topo_ctx
@@ -119,6 +120,12 @@ async def ingest_logs(request: IngestRequest):
         alert_store.add(alert)
         new_alert_ids.append(alert.alert_id)
         alerts_triggered += 1
+
+    if request.logs:
+        await manager.broadcast({"type": "UPDATE_GRAPH"})
+    
+    if alerts_triggered > 0:
+        await manager.broadcast({"type": "NEW_ALERTS"})
 
     return {
         "status":           "ingested",

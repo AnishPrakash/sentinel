@@ -1,5 +1,5 @@
 # backend/main.py
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
@@ -7,6 +7,7 @@ from api.routes_ingest  import router as ingest_router
 from api.routes_graph   import router as graph_router
 from api.routes_alerts  import router as alerts_router
 from api.routes_actions import router as actions_router
+from api.websocket_manager import manager
 
 app = FastAPI(
     title="SENTINEL — AI Cyber Threat Intelligence",
@@ -37,6 +38,17 @@ async def health():
         "service": "SENTINEL",
         "version": "1.0.0",
     }
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            # Handle client messages if necessary, or just wait
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
 
 
 if __name__ == "__main__":
