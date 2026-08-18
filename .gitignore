@@ -15,3 +15,5 @@ neo4j_data/
 *.log
 node_modules/
 .DS_Store
+backend/data/beth_dataset.csv
+backend/data/beth_dataset/
