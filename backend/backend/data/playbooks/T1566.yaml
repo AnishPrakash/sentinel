@@ -1,0 +1,33 @@
+technique_id: T1566
+technique_name: "Phishing"
+tactic: "Initial Access"
+
+actions:
+  critical:
+    - id: "REVOKE_SESSION"
+      label: "Revoke User Session Tokens"
+      description: "Force logout all active sessions for the affected user account."
+      auto_execute: true
+
+    - id: "RESET_CREDS"
+      label: "Force Password Reset"
+      description: "Lock account and require credential reset via admin portal."
+      auto_execute: false
+      confirm_required: true
+
+  high:
+    - id: "QUARANTINE_EMAIL"
+      label: "Quarantine Phishing Email"
+      description: "Pull phishing email from all mailboxes via mail admin API."
+      auto_execute: false
+
+    - id: "SCAN_ATTACHMENTS"
+      label: "Submit Attachments to Sandbox"
+      description: "Route attached files to a sandboxed malware analysis environment."
+      auto_execute: true
+
+  medium:
+    - id: "USER_ALERT"
+      label: "Notify End User"
+      description: "Send security awareness notification to the affected user."
+      auto_execute: true

@@ -1,0 +1,144 @@
+# T1110 — Brute Force
+# MITRE ATT&CK Tactic: Credential Access
+# Covers sub-techniques: T1110.001 (Password Guessing), T1110.002 (Password Cracking),
+#                        T1110.003 (Password Spraying), T1110.004 (Credential Stuffing)
+technique_id: T1110
+technique_name: "Brute Force"
+tactic: "Credential Access"
+description: >
+  Adversaries attempt to gain access to accounts by systematically guessing or
+  cracking credentials. This covers repeated failed authentication attempts
+  against a service (local or remote), password spraying across multiple accounts,
+  and credential stuffing using previously leaked credential pairs.
+
+# Privilege required: none (network-level — see privilege_checker.py TECHNIQUE_PRIVILEGE_REQUIREMENTS)
+
+actions:
+  critical:   # risk_score > 0.85 — active brute force confirmed, account(s) compromised
+    - id: "LOCK_ACCOUNT"
+      label: "Lock Affected Account(s)"
+      description: >
+        Immediately disable or lock every account that was the target of repeated
+        failed authentication within the last detection window. Prevents further
+        access even if credentials were guessed successfully.
+      auto_execute: true
+
+    - id: "BLOCK_IP"
+      label: "Block Source IP at Firewall"
+      description: >
+        Inject a DENY rule into the perimeter firewall and host-based firewall for
+        the source IP(s) observed in the brute-force traffic. Effective immediately
+        against single-source and low-diversity spray attacks.
+      auto_execute: true
+
+    - id: "REVOKE_SESSION"
+      label: "Revoke Active Sessions for Targeted Account"
+      description: >
+        Force-terminate all authenticated sessions for the targeted account in case
+        the attacker already gained access before detection. Covers web tokens,
+        Kerberos TGTs, and NTLM cached credentials.
+      auto_execute: true
+
+  high:       # 0.60 – 0.85 — elevated failed-auth rate, no confirmed compromise yet
+    - id: "RATE_LIMIT_AUTH"
+      label: "Enable Authentication Rate Limiting"
+      description: >
+        Apply progressive account lockout policy (e.g. 5 failures → 15-min lockout)
+        and introduce CAPTCHA or MFA challenge on the targeted service endpoint.
+        Requires confirm to avoid locking out legitimate users on shared endpoints.
+      auto_execute: false
+      confirm_required: true
+
+    - id: "ISOLATE_HOST"
+      label: "Isolate Source Host (Confirm Required)"
+      description: >
+        If the brute-force source is an internal host (lateral movement attempt),
+        remove that host from its network segment. Requires analyst confirmation
+        given blast radius of network isolation.
+      auto_execute: false
+      confirm_required: true
+
+    - id: "CAPTURE_AUTH_LOGS"
+      label: "Capture Full Authentication Log Dump"
+      description: >
+        Pull the last 24h of authentication event logs (Event ID 4625, 4771, 4776)
+        from the targeted host / domain controller. Archive for forensic review.
+      auto_execute: true
+
+    - id: "FORCE_MFA"
+      label: "Force MFA Enrolment on Targeted Account"
+      description: >
+        Push a mandatory MFA challenge to the next login attempt for the targeted
+        account. Even if credentials are correct, the attacker cannot authenticate
+        without the second factor.
+      auto_execute: false
+
+  medium:     # < 0.60 — low-rate suspicious auth, possible scanning or misconfig
+    - id: "WATCHLIST"
+      label: "Add Source IP and Account to Watchlist"
+      description: >
+        Flag the source IP and targeted account for elevated telemetry sampling
+        (5x normal auth log rate). Generate a follow-up alert if failure rate
+        increases or a success event occurs within 60 minutes.
+      auto_execute: true
+
+    - id: "NOTIFY_SOC"
+      label: "Notify SOC Analyst"
+      description: >
+        Send alert notification to the on-call analyst with authentication failure
+        counts, targeted account, source IP, and first/last seen timestamps.
+        Recommend manual review of recent account activity.
+      auto_execute: true
+
+    - id: "GEO_CHECK"
+      label: "Flag Anomalous Geographic Source"
+      description: >
+        Cross-reference source IP against the account's normal login geographies.
+        If source country is anomalous, escalate to HIGH tier automatically.
+      auto_execute: true
+
+# Indicator of Compromise hints for correlation
+ioc_hints:
+  - type: "event_id"
+    values: [4625, 4771, 4776, 4648]   # Windows failed / explicit credential logon
+    description: "Failed authentication events in Windows Security Log"
+
+  - type: "event_id"
+    values: [112, 113]                  # Linux PAM auth failure / success after failure
+    description: "Linux PAM authentication events"
+
+  - type: "threshold"
+    field: "failed_auth_count_per_minute"
+    critical: 20
+    high: 5
+    medium: 2
+    description: "Failed auth attempts per minute against a single account or service"
+
+  - type: "threshold"
+    field: "accounts_targeted_per_source_ip"
+    critical: 10
+    high: 3
+    medium: 2
+    description: "Number of distinct accounts tried from one source IP (spray indicator)"
+
+# MITRE sub-technique cross-references
+sub_techniques:
+  - id: "T1110.001"
+    name: "Password Guessing"
+    notes: "Single account, sequential guesses. High failure count on one username."
+
+  - id: "T1110.002"
+    name: "Password Cracking"
+    notes: "Offline attack. Look for credential dump events (T1003) in same session."
+
+  - id: "T1110.003"
+    name: "Password Spraying"
+    notes: >
+      Low failure count per account but wide account spread from one source.
+      Evades lockout policies. Correlate with high accounts_targeted_per_source_ip.
+
+  - id: "T1110.004"
+    name: "Credential Stuffing"
+    notes: >
+      Credential pairs from external breach. Success rate higher than guessing.
+      Often preceded by reconnaissance (T1589) or procurement (T1597).

@@ -1,0 +1,39 @@
+# T1059 — Command and Scripting Interpreter
+technique_id: T1059
+technique_name: "Command and Scripting Interpreter"
+tactic: "Execution"
+
+actions:
+  critical:   # risk_score > 0.85
+    - id: "KILL_PROC"
+      label: "Terminate Suspicious Process"
+      description: "Immediately kill the offending interpreter process and all children."
+      auto_execute: true
+
+    - id: "BLOCK_IP"
+      label: "Block External IP"
+      description: "Block outbound connections to the contacted external IP at the firewall."
+      auto_execute: true
+
+  high:       # 0.6 - 0.85
+    - id: "ISOLATE_HOST"
+      label: "Isolate Host (Confirm Required)"
+      description: "Remove the host from the network segment pending investigation."
+      auto_execute: false
+      confirm_required: true
+
+    - id: "CAPTURE_MEMORY"
+      label: "Capture Memory Dump"
+      description: "Trigger a memory snapshot for forensic analysis before process termination."
+      auto_execute: false
+
+  medium:     # < 0.6
+    - id: "WATCHLIST"
+      label: "Add to Watchlist"
+      description: "Flag host for increased telemetry sampling (5x normal rate)."
+      auto_execute: true
+
+    - id: "NOTIFY_SOC"
+      label: "Notify SOC Analyst"
+      description: "Send alert notification to on-call analyst via Slack/email."
+      auto_execute: true

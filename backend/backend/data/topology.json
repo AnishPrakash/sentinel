@@ -1,0 +1,26 @@
+{
+  "workstation-1": {
+    "reachable": ["auth-server", "file-server"],
+    "allowed_ports": [445, 80, 443, 3389]
+  },
+  "workstation-2": {
+    "reachable": ["auth-server", "file-server"],
+    "allowed_ports": [445, 80, 443, 3389]
+  },
+  "auth-server": {
+    "reachable": ["db-server", "workstation-1", "workstation-2"],
+    "allowed_ports": [389, 636, 445, 88]
+  },
+  "file-server": {
+    "reachable": ["workstation-1", "workstation-2"],
+    "allowed_ports": [445, 21, 80]
+  },
+  "db-server": {
+    "reachable": ["auth-server"],
+    "allowed_ports": [1433, 5432, 3306]
+  },
+  "dmz-web": {
+    "reachable": ["workstation-1", "workstation-2"],
+    "allowed_ports": [80, 443]
+  }
+}
